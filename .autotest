@@ -1,0 +1,3 @@
+require 'autotest/restart'
+require 'autotest/fsevent'
+
