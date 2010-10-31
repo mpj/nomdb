@@ -18,7 +18,8 @@ describe "NOMDB" do
 
 
  
-  # maybes              
+  # maybes   
+  # TODO correct content-type (http://snippets.aktagon.com/snippets/445-How-to-create-a-JSONP-cross-domain-webservice-with-Sinatra-and-Ruby)           
   # TODO should display nonexisting image instead of 404      
   # TODO performance optimization ( denormalize ingredients ) 
   # TODO Caching
