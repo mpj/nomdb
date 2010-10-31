@@ -15,13 +15,11 @@ describe "NOMDB" do
   
 
   # TODO Invalid input (ids)    
-  # TODO are we really testing JSONP for GET? 
-  # TODO Insert recipe w/o ingredients
+
 
  
   # maybes              
   # TODO should display nonexisting image instead of 404      
-  # TODO requests sans JSONP
   # TODO performance optimization ( denormalize ingredients ) 
   # TODO Caching
   
