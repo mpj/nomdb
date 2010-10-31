@@ -5,8 +5,6 @@ require 'test/unit'
 require 'rack/test'
 require 'json'
 require 'rubygems'
-
-
        
 require 'RMagick'
 include Magick
@@ -73,7 +71,8 @@ describe "NOMDB" do
     
         it 'should not expose image_id' do
           @ingredient_from_post['image_id'].should be_nil 
-        end     
+        end 
+           
 
       end
       
@@ -315,17 +314,25 @@ describe "NOMDB" do
       before do
                                                       
         ingredient_ids = [ @chickpeas, @chorizo, @parsley, @tomatoes ].collect { |i| i['id'] } 
-        comma_separated_string_of_ingredient_ids =  ingredient_ids.join(',')
+        @comma_separated_string_of_ingredient_ids =  ingredient_ids.join(',')
         @existing_recipe = post_and_parse '/recipes', 
                                           :name =>  'Chorizo and Chickpeas', 
-                                          :ingredient_ids => comma_separated_string_of_ingredient_ids
+                                          :ingredient_ids => @comma_separated_string_of_ingredient_ids
       end 
       
       it 'should get values assigned' do
         @existing_recipe['id'].should_not be_nil
         @existing_recipe['name'].should == 'Chorizo and Chickpeas'
         @existing_recipe.should contain_ingredients( [ @chickpeas, @chorizo, @parsley, @tomatoes ] )   
-      end                
+      end
+      
+      it 'should be available as JSONP' do
+        @existing_recipe = post_and_parse '/recipes?callback=jsonp45376437468', 
+                                          :name =>  'Chorizo and Chickpeas', 
+                                          :ingredient_ids => @comma_separated_string_of_ingredient_ids
+        @existing_recipe['name'].should == 'Chorizo and Chickpeas'                       
+                                          
+      end
            
       
       describe 'when retrieving it' do
@@ -466,7 +473,7 @@ describe "NOMDB" do
         @new_recipe['name'].should == 'Chorizo and Chickpeas' 
       end
       
-      it 'should be retriveable' do
+      it 'should be retrievable' do
         recipe_from_get = get_and_parse '/recipes/' + @new_recipe['id']
         recipe_from_get['name'].should == 'Chorizo and Chickpeas' 
       end
