@@ -195,7 +195,10 @@ describe "NOMDB" do
     end
     
     describe 'when listing ingredients via a non-allowed origin' do
-       it 'should not send Access-Control-Allow-Origin header'
+       it 'should not send Access-Control-Allow-Origin header' do
+         get '/ingredients', {}, { 'HTTP_ORIGIN' => "crackerplace.fake" }
+         last_response.headers['Access-Control-Allow-Origin'].should be_nil
+       end
     end     
     
     describe 'when searching for ingredients' do
@@ -236,10 +239,14 @@ describe "NOMDB" do
             get '/ingredients/search/x'
             get_collection('ingredients').should have_index :field_name => 'name', :direction => :ascending
          end
-         
-         
 
-      
+    end
+    
+    describe 'when searching for ingredients via a non-allowed origin' do
+       it 'should not send Access-Control-Allow-Origin header' do
+         get '/ingredients/search/Chickpeas', {}, { 'HTTP_ORIGIN' => "wewillwewillhackyou.net" }
+         last_response.headers['Access-Control-Allow-Origin'].should be_nil
+       end
     end
     
     describe 'when updating the the name of an ingredient' do         
@@ -260,6 +267,8 @@ describe "NOMDB" do
         @ingredient_from_post = post_and_parse "ingredients/#{@chickpeas['id']}?callback=jsonp7238732328", :name => 'Gazpascho bean'
         @ingredient_from_post['name'].should == 'Gazpascho bean' 
       end
+      
+      
 
       describe 'when you retrieve ingredient back' do 
         before do              
@@ -278,6 +287,13 @@ describe "NOMDB" do
       end  
      
     end 
+    
+    describe 'when updating the the name of an ingredient via a non-allowed origin' do
+       it 'should not send Access-Control-Allow-Origin header' do
+         post "ingredients/#{@chickpeas['id']}", { :name => 'Gazpascho bean' }, { 'HTTP_ORIGIN' => "crackerplace.fake" }
+         last_response.headers['Access-Control-Allow-Origin'].should be_nil
+       end
+    end
     
     describe 'when updating the image of an ingredient' do
       before do                                                     
@@ -332,6 +348,13 @@ describe "NOMDB" do
       end
     end
     
+    describe 'when an ingredient is deleted via a non-allowed origin' do
+       it 'should not send Access-Control-Allow-Origin header' do
+         delete '/ingredients/' + @chickpeas['id'], {}, { 'HTTP_ORIGIN' => "lolhats.hackers.com" }
+         last_response.headers['Access-Control-Allow-Origin'].should be_nil
+       end
+    end
+    
     describe 'when an ingredient without image is deleted' do
       it 'should not be retrievable' do       
         delete '/ingredients/' + @chorizo['id']
@@ -361,11 +384,9 @@ describe "NOMDB" do
         it 'should change image uri in the recipe' do
           @existing_recipe['ingredients'][0]['image_uri'].should match /ingredients\/.+\/gazpascho-bean\.jpg/
         end
-        
-        
+          
       end
-      
-      
+        
     end
         
     
@@ -387,10 +408,6 @@ describe "NOMDB" do
         @existing_recipe.should contain_ingredients( [ @chickpeas, @chorizo, @parsley, @tomatoes ] )   
       end    
       
-      it 'should have correct headers' do                                 
-        # TODO: Sort this out to work properly on test/deployment environments
-        last_response.headers['Access-Control-Allow-Origin'].should == @origin_host
-      end
       
       it 'should have allow other domains' do
         last_response.headers['Access-Control-Allow-Origin'].should == @origin_host
@@ -402,6 +419,13 @@ describe "NOMDB" do
                                           :ingredient_ids => @comma_separated_string_of_ingredient_ids
         @existing_recipe['name'].should == 'Chorizo and Chickpeas'                       
                                           
+      end
+      
+      describe '"when a recipe is created via a non-allowed origin' do
+         it 'should not send Access-Control-Allow-Origin header' do
+           post '/recipes', { :name =>  'Chorizo and Chickpeas' }, { 'HTTP_ORIGIN' => "localhose" } 
+           last_response.headers['Access-Control-Allow-Origin'].should be_nil
+         end
       end
            
       
@@ -466,8 +490,13 @@ describe "NOMDB" do
           end       
         end
         
-
-  
+      end # describe 'when updating name and ingredients' 
+      
+      describe 'when updating name and ingredients via a non-allowed origin' do
+         it 'should not send Access-Control-Allow-Origin header' do
+           post '/recipes/' + @existing_recipe['id'], { :name => 'Chorizo, Chickpeas and Cherry tomatoes' }, { 'HTTP_ORIGIN' => "localhorse" } 
+           last_response.headers['Access-Control-Allow-Origin'].should be_nil
+         end
       end
                                 
       it 'should be possible to update only recipe name' do
@@ -542,10 +571,13 @@ describe "NOMDB" do
         end
     
       end
-                
       
-
-      
+      describe 'when the recipe is deleted via a non-allowed origin' do
+         it 'should not send Access-Control-Allow-Origin header' do
+           delete '/recipes/' + @existing_recipe['id'], {}, { 'HTTP_ORIGIN' => "localwhore.backdoor" } 
+           last_response.headers['Access-Control-Allow-Origin'].should be_nil
+         end
+      end
       
     
     end  # describe "when a recipe is created"
