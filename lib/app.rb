@@ -2,15 +2,19 @@ require 'rubygems'
 require 'sinatra'
 require 'mongo'
 require 'bson'     
-require 'unicode'    
-require 'RMagick' 
-require 'data'
+require 'unicode'         
+require 'json'       
+require 'RMagick'    
 include Magick
+
+require 'configuration'
+require 'data'
  
 require 'ruby-debug'
 
-
 get '/ingredients' do
+  print_access_control_header
+  
   ingredients_collection = get_collection("ingredients")
   ingredient_cursor = ingredients_collection.find nil, { :sort => [ :name, :ascending ] }
      
@@ -23,15 +27,18 @@ get '/ingredients' do
 end
                
 post '/ingredients' do
+  print_access_control_header 
   upsert_ingredient params
 end                                                      
 
-post '/ingredients/:id' do       
+post '/ingredients/:id' do
+  print_access_control_header       
   upsert_ingredient params  
 end  
 
 # GET /ingredients/123456789/chickpeas.jpg
-get '/ingredients/*/*.jpg' do
+# This url scheme is not exactly RESTful, but it's very nice for search engines.
+get '/ingredients/*/*.jpg' do 
   id = BSON::ObjectId params[:splat][0] 
   content_type "image/jpeg"
   begin
@@ -47,13 +54,16 @@ get '/ingredients/*/*.jpg' do
   
 end    
 
-get '/ingredients/:id' do
+get '/ingredients/:id' do    
+  
+  print_access_control_header 
   ingredient = get_ingredient params[:id]
   return not_found if ingredient.nil?
   pretty_json(ingredient)
 end
        
-delete %r{/ingredients/([\w]+)} do 
+delete %r{/ingredients/([\w]+)} do
+  print_access_control_header 
   id_string = params[:captures].first
   id = BSON::ObjectId id_string
   ingredient = get_ingredient(id)
@@ -63,10 +73,8 @@ delete %r{/ingredients/([\w]+)} do
 end                                  
 
 get '/ingredients/search/:name' do             
-  
-  get_collection('ingredients').create_index([['name', Mongo::ASCENDING]])
-               
-                                                       
+  print_access_control_header
+  get_collection('ingredients').create_index([['name', Mongo::ASCENDING]])                                                   
   name_for_searching =  simplify_string(params[:name])
   ingredients_cursor = get_collection('ingredients').find( { 'name_simple' => /^#{name_for_searching}/  } )
   ingredients = []
@@ -79,22 +87,26 @@ end
     
 
 
-post '/recipes' do
+post '/recipes' do                          
+  print_access_control_header
   upsert_recipe params
 end
 
-post '/recipes/:id' do          
+post '/recipes/:id' do
+  print_access_control_header          
   upsert_recipe params
   
 end
 
 get '/recipes/:id' do
+  print_access_control_header
   recipe = get_recipe params[:id]
   return not_found if recipe.nil?
   pretty_json(recipe)
 end
 
-delete %r{/recipes/([\w]+)} do 
+delete %r{/recipes/([\w]+)} do
+  print_access_control_header 
   id_string = params[:captures].first
   id = BSON::ObjectId id_string 
   recipe = get_recipe(id) 
@@ -146,6 +158,18 @@ def upsert_ingredient(params)
   
   get_collection("ingredients").save ingredient                                      
   pretty_json ingredient
+end
+
+def print_access_control_header
+  # Prints the Access-Control-Allow-Origin header, allowing for cross-domain-AJAX
+  # if the origin host exists in configuration settings
+  setting = options.allowed_origin_hosts
+  hosts = setting.gsub(/[ ]+/,'').split(',')     
+  hosts.each do |host|               
+    if request.env['HTTP_ORIGIN'] == host
+      headers 'Access-Control-Allow-Origin' => request.env['HTTP_ORIGIN'] 
+    end 
+  end
 end       
 
 def return_json(object)                             

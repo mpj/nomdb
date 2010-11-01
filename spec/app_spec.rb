@@ -3,52 +3,73 @@ require File.dirname(__FILE__) + '/spec_helper'
 require 'app'
 require 'test/unit'
 require 'rack/test'
-require 'json'
-require 'rubygems'
-       
-require 'RMagick'
-include Magick
-
 require 'ruby-debug'   
 
 describe "NOMDB" do         
   
 
   # TODO Invalid input (ids)    
-
+  # TODO Disallow deleting ingredients in use   
+  # TODO Access-Control-Allow-Origin on all methods
+  # TODO find out how to fake rack environment, and test aorigin control 
+          # "Origin" is the header we want to test. How to fake headers?
+            # request.env['']
 
  
-  # maybes   
+  # maybes
+  # TODO try removing JSONP
+  # TODO refactor using let()   
   # TODO correct content-type (http://snippets.aktagon.com/snippets/445-How-to-create-a-JSONP-cross-domain-webservice-with-Sinatra-and-Ruby)           
   # TODO should display nonexisting image instead of 404      
   # TODO performance optimization ( denormalize ingredients ) 
-  # TODO Caching
+  # TODO  Caching    
+  #       Access-Control-Max-Age: 3600
+   
   
   include Rack::Test::Methods
 
-  def app
+  def app 
     @app ||= Sinatra::Application
   end
   
   before :each do
-      clear_database()
+      clear_database()     
+      test_hosts = ['example0.org', 'example1.org','example2.org', 'example3.org', 'example4.org', '*.example5.org']
+      @origin_host = test_hosts[rand(6)] 
+      @env = { 'HTTP_ORIGIN' => @origin_host }
   end
   
   describe "when database empty" do
     
-    describe 'when trying to retrieve a recipe' do
-      before do 
-        get '/recipes/4ccc3f1feee07a04f00000c6' 
+    describe 'when trying to GET a recipe' do
+      before do                                                                    
+        get '/recipes/4ccc3f1feee07a04f00000c6', {}, { 'HTTP_ORIGIN' => @origin_host   }   
       end                             
       
       it 'should return 404' do
         last_response.status.should == 404
+      end   
+      
+      it 'should allow other domains' do
+        last_response.headers['Access-Control-Allow-Origin'].should == @origin_host
       end
       
       it 'should work with jsonp callback' do
         get '/recipes/4ccc3f1feee07a04f00000c6?callback=jsonp64327643782378'
       end
-    end   
+    end
+    
+    describe 'when trying to GET a recipe via a non-allowed host' do
+      before do
+        get '/recipes/4ccc3f1feee07a04f00000c6', {}, { 'HTTP_ORIGIN' => "hackersheaven.me"   }
+      end
+      
+      it 'should not send an Access-Control-Allow-Origin' do
+          last_response.headers['Access-Control-Allow-Origin'].should be_nil 
+      end
+    end
+    
+       
     
     describe 'when ingredient is inserted' do
       before :each do
@@ -70,7 +91,12 @@ describe "NOMDB" do
     
         it 'should not expose image_id' do
           @ingredient_from_post['image_id'].should be_nil 
-        end 
+        end
+        
+         it 'should have allow other domains' do
+           
+           last_response.headers['Access-Control-Allow-Origin'].should == @origin_host
+         end 
            
 
       end
@@ -94,6 +120,10 @@ describe "NOMDB" do
           parsed_response = get_and_parse '/ingredients/' + @ingredient_from_post['id'] + '?callback=jsonp3273267239821'
           parsed_response['id'].should ==  @ingredient_from_post['id']
         end
+        
+        it 'should have allow other domains' do
+          last_response.headers['Access-Control-Allow-Origin'].should == @origin_host 
+        end
       end         
       
       describe 'when displaying image of an ingredient' do
@@ -116,8 +146,20 @@ describe "NOMDB" do
                                                                               
       end
       
-    end
-
+    end  # describe 'when ingredient is inserted'
+    
+    describe 'when ingredient is inserted from a non-allowed domain' do 
+      
+      it 'should not send Access-Control-Allow-Origin header' do
+        post_and_parse '/ingredients',  
+                                  {:name => 'Hackerpeas' }, 
+                                  { 'HTTP_ORIGIN' => 'hackerninjas.dk'}
+        last_response.headers['Access-Control-Allow-Origin'].should be_nil
+                                   
+                                  
+      end                           
+      
+    end 
     
   
   end
@@ -146,6 +188,14 @@ describe "NOMDB" do
         @result = get_and_parse '/ingredients?callback=jsonp3473428398392'
         @result[4]['name'].should == 'Tomatoes'  
       end
+      
+      it 'should have allow other domains' do
+        last_response.headers['Access-Control-Allow-Origin'].should == @origin_host
+      end
+    end
+    
+    describe 'when listing ingredients via a non-allowed origin' do
+       it 'should not send Access-Control-Allow-Origin header'
     end     
     
     describe 'when searching for ingredients' do
@@ -174,6 +224,10 @@ describe "NOMDB" do
            result[0]['id'].should == @chickpeas['id']
          end
          
+         it 'should have allow other domains' do
+           last_response.headers['Access-Control-Allow-Origin'].should == @origin_host
+         end
+         
          it 'should NOT have index prior to searching' do
            get_collection('ingredients').should_not have_index :field_name => 'name', :direction => :ascending
          end
@@ -196,6 +250,10 @@ describe "NOMDB" do
       
       it 'should have the updated name' do
         @ingredient_from_post['name'].should == 'Gazpascho bean'
+      end
+      
+      it 'should have allow other domains' do
+        last_response.headers['Access-Control-Allow-Origin'].should == @origin_host
       end
       
       it 'should be availiable as JSONP' do
@@ -261,6 +319,10 @@ describe "NOMDB" do
       it 'should have deleted the image as well' do 
         get @deleted_ingredient['image_uri']
         last_response.status.should == 404
+      end
+      
+      it 'should have allow other domains' do
+        last_response.headers['Access-Control-Allow-Origin'].should == @origin_host
       end 
       
       it 'should be available as JSONP' do    
@@ -323,6 +385,15 @@ describe "NOMDB" do
         @existing_recipe['id'].should_not be_nil
         @existing_recipe['name'].should == 'Chorizo and Chickpeas'
         @existing_recipe.should contain_ingredients( [ @chickpeas, @chorizo, @parsley, @tomatoes ] )   
+      end    
+      
+      it 'should have correct headers' do                                 
+        # TODO: Sort this out to work properly on test/deployment environments
+        last_response.headers['Access-Control-Allow-Origin'].should == @origin_host
+      end
+      
+      it 'should have allow other domains' do
+        last_response.headers['Access-Control-Allow-Origin'].should == @origin_host
       end
       
       it 'should be available as JSONP' do
@@ -344,6 +415,10 @@ describe "NOMDB" do
           @existing_recipe['name'].should == 'Chorizo and Chickpeas'
           @existing_recipe.should contain_ingredients( [ @chickpeas, @chorizo, @parsley, @tomatoes ] )
         end  
+        
+        it 'should have allow other domains' do
+          last_response.headers['Access-Control-Allow-Origin'].should == @origin_host
+        end
         
         it 'should be availiable as JSONP' do
           @existing_recipe = get_and_parse '/recipes/' + @existing_recipe['id'] + "?callback=jsonp7287323287828"
@@ -369,6 +444,10 @@ describe "NOMDB" do
           @recipe_from_post['id'].should_not be_nil
           @recipe_from_post['name'].should == 'Chorizo, Chickpeas and Cherry tomatoes'
           @recipe_from_post.should contain_ingredients( [ @chickpeas, @chorizo, @parsley, @cherry_tomatoes ] )
+        end
+        
+        it 'should have allow other domains' do
+          last_response.headers['Access-Control-Allow-Origin'].should == @origin_host
         end
         
         it 'should be availiable as JSONP' do
@@ -430,7 +509,7 @@ describe "NOMDB" do
                  
        
     
-      describe 'when a recipe is deleted' do
+      describe 'when the recipe is deleted' do
       
         before do
           @deleted_recipe = delete_and_parse '/recipes/' + @existing_recipe['id']
@@ -439,7 +518,11 @@ describe "NOMDB" do
         it 'should return the deleted recipe' do
           @deleted_recipe['name'].should == @existing_recipe['name']
           @deleted_recipe['id'].should == @existing_recipe['id']
-        end 
+        end
+        
+        it 'should have allow calling origins' do      
+          last_response.headers['Access-Control-Allow-Origin'].should == @origin_host
+        end
         
         it 'should be availiable as JSONP' do
           @existing_recipe = post_and_parse '/recipes',  :name =>  'Chorizo and Chickpeas' # re-create it first!
@@ -459,6 +542,11 @@ describe "NOMDB" do
         end
     
       end
+                
+      
+
+      
+      
     
     end  # describe "when a recipe is created"
     
@@ -479,7 +567,7 @@ describe "NOMDB" do
       
     end
     
-  end # describe "NOMDB"
+  end #  describe "NOMDB"
   
   
 
@@ -487,7 +575,20 @@ describe "NOMDB" do
   
   private
   
+  def delete_and_parse(url, env = @env)
+    delete url, {}, env
+    parse_sinatra_response(last_response.body)
+  end
 
+  def post_and_parse(url, params = {}, env = @env)
+    post url, params, env 
+    parse_sinatra_response(last_response.body)
+  end
+
+  def get_and_parse(url, params = {}, env = @env)
+    get url, params, env
+    parse_sinatra_response(last_response.body)
+  end
   
   RSpec::Matchers.define :contain_ingredients do |ingredients_to_match|                       
     # Check input

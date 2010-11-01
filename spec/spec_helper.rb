@@ -21,20 +21,7 @@ def optimized_image_data(test_file_path)
   photo.to_blob
 end
 
-def delete_and_parse(url)
-  delete url
-  parse_sinatra_response(last_response.body)
-end
 
-def post_and_parse(url, params)
-  post url, params
-  parse_sinatra_response(last_response.body)
-end
-
-def get_and_parse(url, params = nil)
-  get url, params
-  parse_sinatra_response(last_response.body)
-end
 
 def parse_sinatra_response(body)
     
