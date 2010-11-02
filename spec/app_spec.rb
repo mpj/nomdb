@@ -33,9 +33,9 @@ describe "NOMDB" do
   end
   
   before :each do
-      clear_database()     
-      test_hosts = ['example0.org', 'example1.org','example2.org', 'example3.org', 'example4.org', '*.example5.org']
-      @origin_host = test_hosts[rand(6)] 
+      clear_database      
+      test_hosts = ['http://localhost', 'http://localhost:4568', 'http://example0.org', 'http://legit-app.heroku.com','http://example2.org', 'http://example3.org', 'http://ninjas.org', 'subdomain.ninjas.org']
+      @origin_host = test_hosts[rand(8)] 
       @env = { 'HTTP_ORIGIN' => @origin_host }
   end
   
@@ -60,8 +60,9 @@ describe "NOMDB" do
     end
     
     describe 'when trying to GET a recipe via a non-allowed host' do
-      before do
-        get '/recipes/4ccc3f1feee07a04f00000c6', {}, { 'HTTP_ORIGIN' => "hackersheaven.me"   }
+      before do                                                                                         
+        # hacker on same domain, but different subdomain
+        get '/recipes/4ccc3f1feee07a04f00000c6', {}, { 'HTTP_ORIGIN' => "http://hacker-app.heroku.com" }
       end
       
       it 'should not send an Access-Control-Allow-Origin' do
@@ -153,7 +154,7 @@ describe "NOMDB" do
       it 'should not send Access-Control-Allow-Origin header' do
         post_and_parse '/ingredients',  
                                   {:name => 'Hackerpeas' }, 
-                                  { 'HTTP_ORIGIN' => 'hackerninjas.dk'}
+                                  { 'HTTP_ORIGIN' => 'http://hackerninjas.dk'}
         last_response.headers['Access-Control-Allow-Origin'].should be_nil
                                    
                                   
@@ -196,7 +197,7 @@ describe "NOMDB" do
     
     describe 'when listing ingredients via a non-allowed origin' do
        it 'should not send Access-Control-Allow-Origin header' do
-         get '/ingredients', {}, { 'HTTP_ORIGIN' => "crackerplace.fake" }
+         get '/ingredients', {}, { 'HTTP_ORIGIN' => "http://crackerplace.fake" }
          last_response.headers['Access-Control-Allow-Origin'].should be_nil
        end
     end     
@@ -243,8 +244,9 @@ describe "NOMDB" do
     end
     
     describe 'when searching for ingredients via a non-allowed origin' do
-       it 'should not send Access-Control-Allow-Origin header' do
-         get '/ingredients/search/Chickpeas', {}, { 'HTTP_ORIGIN' => "wewillwewillhackyou.net" }
+       it 'should not send Access-Control-Allow-Origin header' do                                          
+         # another subdomain hacker here, just for fun
+         get '/ingredients/search/Chickpeas', {}, { 'HTTP_ORIGIN' => "http://wewillwewillhackyou.heroku.com" }
          last_response.headers['Access-Control-Allow-Origin'].should be_nil
        end
     end
@@ -290,7 +292,7 @@ describe "NOMDB" do
     
     describe 'when updating the the name of an ingredient via a non-allowed origin' do
        it 'should not send Access-Control-Allow-Origin header' do
-         post "ingredients/#{@chickpeas['id']}", { :name => 'Gazpascho bean' }, { 'HTTP_ORIGIN' => "crackerplace.fake" }
+         post "ingredients/#{@chickpeas['id']}", { :name => 'Gazpascho bean' }, { 'http://HTTP_ORIGIN' => "crackerplace.fake" }
          last_response.headers['Access-Control-Allow-Origin'].should be_nil
        end
     end
@@ -350,7 +352,7 @@ describe "NOMDB" do
     
     describe 'when an ingredient is deleted via a non-allowed origin' do
        it 'should not send Access-Control-Allow-Origin header' do
-         delete '/ingredients/' + @chickpeas['id'], {}, { 'HTTP_ORIGIN' => "lolhats.hackers.com" }
+         delete '/ingredients/' + @chickpeas['id'], {}, { 'HTTP_ORIGIN' => "http://lolhats.hackers.com" }
          last_response.headers['Access-Control-Allow-Origin'].should be_nil
        end
     end
@@ -423,7 +425,7 @@ describe "NOMDB" do
       
       describe '"when a recipe is created via a non-allowed origin' do
          it 'should not send Access-Control-Allow-Origin header' do
-           post '/recipes', { :name =>  'Chorizo and Chickpeas' }, { 'HTTP_ORIGIN' => "localhose" } 
+           post '/recipes', { :name =>  'Chorizo and Chickpeas' }, { 'http://HTTP_ORIGIN' => "localhose" } 
            last_response.headers['Access-Control-Allow-Origin'].should be_nil
          end
       end
@@ -494,7 +496,7 @@ describe "NOMDB" do
       
       describe 'when updating name and ingredients via a non-allowed origin' do
          it 'should not send Access-Control-Allow-Origin header' do
-           post '/recipes/' + @existing_recipe['id'], { :name => 'Chorizo, Chickpeas and Cherry tomatoes' }, { 'HTTP_ORIGIN' => "localhorse" } 
+           post '/recipes/' + @existing_recipe['id'], { :name => 'Chorizo, Chickpeas and Cherry tomatoes' }, { 'HTTP_ORIGIN' => "http://localhorse" } 
            last_response.headers['Access-Control-Allow-Origin'].should be_nil
          end
       end
@@ -574,7 +576,7 @@ describe "NOMDB" do
       
       describe 'when the recipe is deleted via a non-allowed origin' do
          it 'should not send Access-Control-Allow-Origin header' do
-           delete '/recipes/' + @existing_recipe['id'], {}, { 'HTTP_ORIGIN' => "localwhore.backdoor" } 
+           delete '/recipes/' + @existing_recipe['id'], {}, { 'HTTP_ORIGIN' => "http://localwhore.backdoor" } 
            last_response.headers['Access-Control-Allow-Origin'].should be_nil
          end
       end

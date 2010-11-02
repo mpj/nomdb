@@ -163,13 +163,29 @@ end
 def print_access_control_header
   # Prints the Access-Control-Allow-Origin header, allowing for cross-domain-AJAX
   # if the origin host exists in configuration settings
-  setting = options.allowed_origin_hosts
-  hosts = setting.gsub(/[ ]+/,'').split(',')     
-  hosts.each do |host|               
-    if request.env['HTTP_ORIGIN'] == host
+  
+  client_origin = request.env['HTTP_ORIGIN'] # example: http://admin.minimanom.com
+  return if not client_origin 
+  allowed_hosts_setting = options.allowed_origin_hosts
+  allowed_hosts_array = allowed_hosts_setting.gsub(/[ ]+/,'').split(',')     
+  allowed_hosts_array.each do |host|                     
+
+    client_origin = client_origin.gsub /http:\/\//, '' # Remove http://                
+    use_wildcard_comparison = host.match /^\*\./ # begins with *.    
+    if use_wildcard_comparison  
+      host = host.gsub /\*\./, '' # remove '*.' from '*.minimanom.com'
+      regex = "#{client_origin}$" # host needs to end with origin
+    else
+      regex = "^#{client_origin}$" # host needs match exactly
+    end
+    
+    if host.match regex
+      # Settings file contains hosts without http:// 
+      # but origin headers should have them, 
+      # so use the unmanipulated HTTP_ORIGIN for header:
       headers 'Access-Control-Allow-Origin' => request.env['HTTP_ORIGIN'] 
-    end 
-  end
+    end
+  end #each
 end       
 
 def return_json(object)                             
